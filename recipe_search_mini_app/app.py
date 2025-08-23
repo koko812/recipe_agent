@@ -16,7 +16,7 @@ def search(req: SearchRequest) -> List[Recipe]:
     cur = conn.cursor()
 
     # 各キーワード t について：
-    #   (タイトルに LIKE '%t%' もしくは 材料名に LIKE '%t%') を AND で積む
+    #   (タイトルに LIKE '%t%' もしくは 材料名に LIKE '%t%') を OR でまとめる
     base_sql = """
         SELECT r.id, r.title, r.url, r.total_time_min,
                i.name AS ing_name, i.quantity AS ing_qty, i.unit AS ing_unit
@@ -25,24 +25,37 @@ def search(req: SearchRequest) -> List[Recipe]:
         WHERE 1=1
     """
     params: list[str] = []
+    conds: list[str] = []  # ← 追加
+
     for _t in toks:
-        base_sql += """
-            AND (
-                r.title LIKE ? OR
-                EXISTS (
-                    SELECT 1 FROM recipe_ingredients i2
-                    WHERE i2.recipe_id = r.id AND i2.name LIKE ?
-                )
-            )
-        """
+        conds.append(
+            """
+            (r.title LIKE ? OR EXISTS (
+                SELECT 1 FROM recipe_ingredients i2
+                WHERE i2.recipe_id = r.id AND i2.name LIKE ?
+            ))
+            """
+        )
         like = f"%{_t}%"
         params.extend([like, like])
-        print("SQL:", base_sql)
-        print("params:", params)
 
-    rows = cur.execute(base_sql, params).fetchall()
-    print(rows[0].keys())  # 取り出せるカラム名
-    print(dict(rows[0]))   # 1行を辞書化して中身を見る
+    # ループ外で完成形を作る（toks が空なら素通し）
+    sql = base_sql + ("" if not conds else " AND (" + " OR ".join(conds) + ")")
+    print("SQL:", sql)
+    print("params:", params)
+
+    rows = cur.execute(sql, params).fetchall()
+
+    # ← これを追加：0件ならここで返す（IndexError回避）
+    if not rows:
+        conn.close()
+        return []
+
+    #print(rows[0].keys())   # 取り出せるカラム名
+    #print(dict(rows[0]))    # 1行を辞書化して中身を見る
+    print(f"[DEBUG] rows={len(rows)}件")
+    for i, row in enumerate(rows[:10]):  # 先頭10行だけ
+        print(f"[{i}] id={row['id']} title={row['title']} ing={row['ing_name']} qty={row['ing_qty']} unit={row['ing_unit']}")
     conn.close()
 
     # レシピ単位にまとめ直す
