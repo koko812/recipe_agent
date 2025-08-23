@@ -1,5 +1,30 @@
+# Python
 __pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+*.pyo
+*.pyd
+
+# Environments
 .venv/
-.pytest_cache/
-*.pyc
+.env
+venv/
+ENV/
+
+# uv
 uv.lock
+
+# VSCode / IDE
+.vscode/
+.idea/
+
+# pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS files
+.DS_Store
+Thumbs.db
+
