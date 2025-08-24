@@ -28,3 +28,4 @@ htmlcov/
 .DS_Store
 Thumbs.db
 
+recipe_search_mini_app/food_info/data
